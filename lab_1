@@ -1,0 +1,90 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+// Функция приветствия
+func hello(name string) string {
+	return fmt.Sprintf("Привет, %s!", name)
+}
+
+// Функция, выводящая четные числа в диапазоне
+func printEven(a, b int64) error {
+	if a > b {
+		return errors.New("левая граница диапазона больше правой")
+	}
+	for i := a; i <= b; i++ {
+		if i%2 == 0 {
+			fmt.Println(i)
+		}
+	}
+	return nil
+}
+
+// Функция для выполнения математических операций
+func apply(a, b float64, operator string) (float64, error) {
+	switch operator {
+	case "+":
+		return a + b, nil
+	case "-":
+		return a - b, nil
+	case "*":
+		return a * b, nil
+	case "/":
+		if b == 0 {
+			return 0, errors.New("деление на ноль")
+		}
+		return a / b, nil
+	default:
+		return 0, errors.New("действие не поддерживается")
+	}
+}
+
+// Основная функция для тестирования всех написанных функций
+func main() {
+	// Тестирование функции hello
+	fmt.Println(hello("Иван"))
+
+	// Тестирование функции printEven
+	fmt.Println("Четные числа от 1 до 10:")
+	if err := printEven(1, 10); err != nil {
+		fmt.Println("Ошибка:", err)
+	}
+
+	// Попробуем с неправильными границами
+	fmt.Println("Четные числа от 10 до 1:")
+	if err := printEven(10, 1); err != nil {
+		fmt.Println("Ошибка:", err)
+	}
+
+	// Тестирование функции apply
+	result, err := apply(3, 5, "+")
+	if err != nil {
+		fmt.Println("Ошибка:", err)
+	} else {
+		fmt.Println("Результат 3 + 5 =", result)
+	}
+
+	result, err = apply(7, 10, "*")
+	if err != nil {
+		fmt.Println("Ошибка:", err)
+	} else {
+		fmt.Println("Результат 7 * 10 =", result)
+	}
+
+	result, err = apply(3, 5, "#")
+	if err != nil {
+		fmt.Println("Ошибка:", err)
+	} else {
+		fmt.Println("Результат 3 # 5 =", result)
+	}
+
+	result, err = apply(10, 0, "/")
+	if err != nil {
+		fmt.Println("Ошибка:", err)
+	} else {
+		fmt.Println("Результат 10 / 0 =", result)
+	}
+}
