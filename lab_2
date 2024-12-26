@@ -1,0 +1,135 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+	"math"
+)
+
+// Задание 1. Массивы и срезы
+
+// Функция форматирует IP-адрес
+func formatIP(ip [4]byte) string {
+	return fmt.Sprintf("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3])
+}
+
+// Функция возвращает срез четных чисел в заданном диапазоне
+func listEven(a, b int) ([]int, error) {
+	if a > b {
+		return nil, errors.New("левая граница диапазона больше правой")
+	}
+	evens := []int{}
+	for i := a; i <= b; i++ {
+		if i%2 == 0 {
+			evens = append(evens, i)
+		}
+	}
+	return evens, nil
+}
+
+// Задание 2. Карты
+
+// Функция подсчитывает количество вхождений символов в строке
+func countCharacters(s string) map[rune]int {
+	counts := make(map[rune]int)
+	for _, char := range s {
+		counts[char]++
+	}
+	return counts
+}
+
+// Задание 3. Структуры, методы и интерфейсы
+
+type Point struct {
+	X, Y float64
+}
+
+type Segment struct {
+	Start, End Point
+}
+
+// Метод для расчета длины отрезка
+func (s Segment) Length() float64 {
+	return math.Sqrt(math.Pow(s.End.X-s.Start.X, 2) + math.Pow(s.End.Y-s.Start.Y, 2))
+}
+
+type Triangle struct {
+	A, B, C Point
+}
+
+// Метод для расчета площади треугольника
+func (t Triangle) Area() float64 {
+	return math.Abs(0.5 * (t.A.X*(t.B.Y-t.C.Y) + t.B.X*(t.C.Y-t.A.Y) + t.C.X*(t.A.Y-t.B.Y)))
+}
+
+type Circle struct {
+	Center Point
+	Radius float64
+}
+
+// Метод для расчета площади круга
+func (c Circle) Area() float64 {
+	return math.Pi * c.Radius * c.Radius
+}
+
+// Интерфейс для фигур
+type Shape interface {
+	Area() float64
+}
+
+// Функция для печати площади фигуры
+func printArea(s Shape) {
+	result := s.Area()
+	fmt.Printf("Площадь фигуры: %.2f\n", result)
+}
+
+// Задание 4. Функциональное программирование
+
+// Функция для применения функции к каждому элементу среза
+func Map(slice []float64, fn func(float64) float64) []float64 {
+	result := make([]float64, len(slice))
+	copy(result, slice)
+	for i, v := range result {
+		result[i] = fn(v)
+	}
+	return result
+}
+
+func square(x float64) float64 {
+	return x * x
+}
+
+func main() {
+	// Задание 1
+	ip := [4]byte{127, 0, 0, 1}
+	fmt.Println("IP-адрес:", formatIP(ip))
+
+	evens, err := listEven(1, 10)
+	if err != nil {
+		fmt.Println("Ошибка:", err)
+	} else {
+		fmt.Println("Четные числа от 1 до 10:", evens)
+	}
+	
+	// Задание 2
+	str := "hello world"
+	charCounts := countCharacters(str)
+	fmt.Println("Количество вхождений символов:", charCounts)
+
+	// Задание 3
+	segment := Segment{Point{0, 0}, Point{3, 4}}
+	fmt.Printf("Длина отрезка: %.2f\n", segment.Length())
+
+	triangle := Triangle{Point{0, 0}, Point{4, 0}, Point{0, 3}}
+	printArea(triangle)
+
+	circle := Circle{Point{0, 0}, 5}
+	printArea(circle)
+
+	// Задание 4
+	values := []float64{1, 2, 3, 4, 5}
+	fmt.Println("Исходный срез:", values)
+
+	squaredValues := Map(values, square)
+	fmt.Println("Срез после применения функции квадрата:", squaredValues)
+}
