@@ -1,0 +1,129 @@
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+)
+
+// Задание 1: Работа с query-параметрами
+func getNameAndAge(c *gin.Context) {
+	name := c.Query("name")
+	age := c.Query("age")
+	response := fmt.Sprintf("Меня зовут %s, мне %s лет", name, age)
+	c.String(http.StatusOK, response)
+}
+
+// Задание 2: Арифметические операции
+func add(c *gin.Context) {
+	a, err := strconv.Atoi(c.Query("a"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "недостаточно параметров"})
+		return
+	}
+
+	b, err := strconv.Atoi(c.Query("b"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "недостаточно параметров"})
+		return
+	}
+
+	result := a + b
+	c.JSON(http.StatusOK, gin.H{"result": result})
+}
+
+func sub(c *gin.Context) {
+	a, err := strconv.Atoi(c.Query("a"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "недостаточно параметров"})
+		return
+	}
+
+	b, err := strconv.Atoi(c.Query("b"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "недостаточно параметров"})
+		return
+	}
+
+	result := a - b
+	c.JSON(http.StatusOK, gin.H{"result": result})
+}
+
+func mul(c *gin.Context) {
+	a, err := strconv.Atoi(c.Query("a"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "недостаточно параметров"})
+		return
+	}
+
+	b, err := strconv.Atoi(c.Query("b"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "недостаточно параметров"})
+		return
+	}
+
+	result := a * b
+	c.JSON(http.StatusOK, gin.H{"result": result})
+}
+
+func div(c *gin.Context) {
+	a, err := strconv.Atoi(c.Query("a"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "недостаточно параметров"})
+		return
+	}
+
+	b, err := strconv.Atoi(c.Query("b"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "недостаточно параметров"})
+		return
+	}
+
+	if b == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "деление на ноль невозможно"})
+		return
+	}
+
+	result := float64(a) / float64(b)
+	c.JSON(http.StatusOK, gin.H{"result": result})
+}
+
+// Задание 3: Работа с JSON
+func countCharacters(c *gin.Context) {
+	var request struct {
+		Text string `json:"text"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "недостаточно данных"})
+		return
+	}
+
+	counts := make(map[rune]int)
+	for _, char := range request.Text {
+		counts[char]++
+	}
+
+	c.JSON(http.StatusOK, counts)
+}
+
+func main() {
+	r := gin.Default()
+
+	// Задание 1: Маршрут для работы с query-параметрами
+	r.GET("/name", getNameAndAge)
+
+	// Задание 2: Маршруты для арифметических операций
+	r.GET("/add", add)
+	r.GET("/sub", sub)
+	r.GET("/mul", mul)
+	r.GET("/div", div)
+
+	// Задание 3: Маршрут для работы с JSON
+	r.POST("/count", countCharacters)
+
+	// Запуск сервера
+	r.Run(":8080") // Запустим сервер на порту 8080
+}
