@@ -1,0 +1,146 @@
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
+	"github.com/golang-jwt/jwt/v4"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"time"
+)
+
+var db *gorm.DB
+var secretKey = "your-256-bit-secret"
+
+type Customer struct {
+	ID       uint   `json:"id" gorm:"primaryKey"`
+	Email    string `json:"email" gorm:"unique"`
+	Password string `json:"password"`
+}
+
+func main() {
+	var err error
+	dsn := "host=localhost user=yourusername dbname=yourdbname password=yourpassword port=5432 sslmode=disable"
+	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+
+	// Миграция таблицы
+	db.AutoMigrate(&Customer{})
+
+	router := gin.Default()
+
+	router.POST("/register", register)
+	router.POST("/login", login)
+
+	authenticatedGroup := router.Group("/")
+	authenticatedGroup.Use(AuthRequired)
+	authenticatedGroup.GET("/customer/:id", getCustomer)
+
+	router.Run(":8080")
+}
+
+func register(c *gin.Context) {
+	var newCustomer Customer
+	if err := c.ShouldBindJSON(&newCustomer); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if newCustomer.Email == "" || newCustomer.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Email and Password required"})
+		return
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newCustomer.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not hash password"})
+		return
+	}
+	newCustomer.Password = string(hashedPassword)
+
+	if result := db.Create(&newCustomer); result.Error != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "User already exists"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, newCustomer)
+}
+
+func login(c *gin.Context) {
+	var input Customer
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var customer Customer
+	if err := db.Where("email = ?", input.Email).First(&customer).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(customer.Password), []byte(input.Password)); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
+
+	expirationTime := time.Now().Add(1 * time.Hour)
+	claims := jwt.MapClaims{
+		"sub": customer.ID,
+		"exp": expirationTime.Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(secretKey))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"token": tokenString})
+}
+
+func AuthRequired(c *gin.Context) {
+	tokenStr := c.GetHeader("Authorization")
+	if tokenStr == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "No token provided"})
+		c.Abort()
+		return
+	}
+
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {
+		return []byte(secretKey), nil
+	})
+
+	if err != nil || !token.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		c.Abort()
+		return
+	}
+
+	id := token.Claims.(jwt.MapClaims)["sub"].(uint)
+	c.Set("customerID", id)
+}
+
+func getCustomer(c *gin.Context) {
+	customerID := c.Param("id")
+	id := c.MustGet("customerID").(uint)
+
+	if fmt.Sprint(id) != customerID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You do not have access to this resource"})
+		return
+	}
+
+	var customer Customer
+	if err := db.First(&customer, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Customer not found"})
+		return
+	}
+
+	customer.Password = "" // do not return password hash
+	c.JSON(http.StatusOK, customer)
+}
+
